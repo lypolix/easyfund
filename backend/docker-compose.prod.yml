@@ -5,7 +5,7 @@ services:
     image: postgres:15-alpine
     container_name: pg_easy
     env_file:
-      - ./backend/.env.prod
+      - .env.prod
     environment:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
@@ -27,12 +27,12 @@ services:
     image: migrate/migrate:v4.17.0
     container_name: db_easy
     env_file:
-      - ./backend/.env.prod
+      - .env.prod
     depends_on:
       postgres:
         condition: service_healthy
     volumes:
-      - ./backend/migrations:/migrations:ro
+      - ./migrations:/migrations:ro
     entrypoint: ["/usr/local/bin/migrate"]
     command:
       - "-path=/migrations"
@@ -48,7 +48,7 @@ services:
       dockerfile: Dockerfile
     container_name: app_easy
     env_file:
-      - ./backend/.env.prod
+      - .env.prod
     environment:
       ENV: ${ENV:-development}
       DB_HOST: ${DB_HOST:-postgres}

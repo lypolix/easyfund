@@ -1,66 +1,207 @@
--- 000010_seed_demo_data_up.sql
+-- 000010_seed_demo_data.up.sql
 
 -- 1) Пользователи
 INSERT INTO users (user_id, full_name, email, phone, password_hash)
 VALUES
-  (1, 'Ivan Petrov','ivan@example.com','+79998887761','$2y$10$Kjh5eRBHUIhi38Dc/9za9ORrAwDzn8qE0.ZgR1W5NsJDndjzk/mJ2'),
-  (2, 'Anna Sidorova','anna@example.com','+79998887762','$2y$10$Kjh5eRBHUIhi38Dc/9za9ORrAwDzn8qE0.ZgR1W5NsJDndjzk/mJ2'),
-  (3, 'Pavel Smirnov','pavel@example.com','+79998887763','$2y$10$Kjh5eRBHUIhi38Dc/9za9ORrAwDzn8qE0.ZgR1W5NsJDndjzk/mJ2'),
-  (4, 'Olga Ivanova','olga@example.com','+79998887764','$2y$10$Kjh5eRBHUIhi38Dc/9za9ORrAwDzn8qE0.ZgR1W5NsJDndjzk/mJ2'),
-  (5, 'Sergey Volkov','sergey@example.com','+79998887765','$2y$10$Kjh5eRBHUIhi38Dc/9za9ORrAwDzn8qE0.ZgR1W5NsJDndjzk/mJ2');
+  (1, 'Иван Петров','ivan@example.com','+79998887761','$2y$10$Kjh5eRBHUIhi38Dc/9za9ORrAwDzn8qE0.ZgR1W5NsJDndjzk/mJ2'),
+  (2, 'Анна Сидорова','anna@example.com','+79998887762','$2y$10$Kjh5eRBHUIhi38Dc/9za9ORrAwDzn8qE0.ZgR1W5NsJDndjzk/mJ2'),
+  (3, 'Павел Смирнов','pavel@example.com','+79998887763','$2y$10$Kjh5eRBHUIhi38Dc/9za9ORrAwDzn8qE0.ZgR1W5NsJDndjzk/mJ2'),
+  (4, 'Ольга Иванова','olga@example.com','+79998887764','$2y$10$Kjh5eRBHUIhi38Dc/9za9ORrAwDzn8qE0.ZgR1W5NsJDndjzk/mJ2'),
+  (5, 'Сергей Волков','sergey@example.com','+79998887765','$2y$10$Kjh5eRBHUIhi38Dc/9za9ORrAwDzn8qE0.ZgR1W5NsJDndjzk/mJ2');
 
 -- Устанавливаем последовательность для users
 SELECT setval('users_user_id_seq', (SELECT MAX(user_id) FROM users));
 
--- 2) Счета (user_bank_accounts)
+-- 2) Счета (user_bank_accounts) - по счету в каждом банке для каждого пользователя
 INSERT INTO user_bank_accounts (user_id, bank_id, balance, currency, created_at)
 SELECT u.user_id, b.bank_id,
        round((random()*90000 + 10000)::numeric, 2),
        'RUB',
-       now()
+       now() - (random()*365 || ' days')::interval
 FROM users u
 CROSS JOIN banks b
 WHERE u.user_id BETWEEN 1 AND 5;
 
--- 3) Кредиты (по одному на пользователя)
-INSERT INTO loans (user_id, original_amount, interest_rate, status, purpose, created_at)
-SELECT u.user_id, v.original_amount, v.interest_rate, 'ACTIVE', 'Demo loan purpose', now()
-FROM (VALUES
-  (1, 200000::numeric, 14.9::numeric),
-  (2, 350000::numeric, 16.5::numeric),
-  (3, 150000::numeric, 12.5::numeric),
-  (4, 500000::numeric, 17.9::numeric),
-  (5, 120000::numeric, 13.9::numeric)
-) AS v(user_id, original_amount, interest_rate)
-JOIN users u ON u.user_id = v.user_id;
+-- 3) Кредиты (несколько кредитов на пользователя с разными статусами)
+INSERT INTO loans (loan_id, user_id, original_amount, interest_rate, status, purpose, created_at, taken_at)
+VALUES
+  (1, 1, 200000, 14.9, 'ACTIVE', 'Покупка автомобиля', '2023-01-15 10:00:00', '2023-01-15 10:00:00'),
+  (2, 1, 50000, 12.5, 'CLOSED', 'Ремонт квартиры', '2022-06-10 14:30:00', '2022-06-10 14:30:00'),
+  (3, 2, 350000, 16.5, 'ACTIVE', 'Ипотека', '2023-03-20 09:15:00', '2023-03-20 09:15:00'),
+  (4, 2, 80000, 15.0, 'ACTIVE', 'Образовательный кредит', '2023-08-05 16:45:00', '2023-08-05 16:45:00'),
+  (5, 3, 150000, 12.5, 'ACTIVE', 'Потребительский кредит', '2023-05-12 11:20:00', '2023-05-12 11:20:00'),
+  (6, 4, 500000, 17.9, 'ACTIVE', 'Ипотека', '2023-02-28 13:10:00', '2023-02-28 13:10:00'),
+  (7, 5, 120000, 13.9, 'CLOSED', 'Покупка бытовой техники', '2022-11-15 08:30:00', '2022-11-15 08:30:00'),
+  (8, 5, 250000, 14.2, 'ACTIVE', 'Автокредит', '2023-07-22 15:25:00', '2023-07-22 15:25:00');
 
--- 4) Платежи по кредитам
+SELECT setval('loans_loan_id_seq', (SELECT MAX(loan_id) FROM loans));
+
+-- 4) Разделы кредитов (loan_splits) - распределение кредитов по банкам
+INSERT INTO loan_splits (loan_id, bank_id, split_amount, remaining_principal)
+VALUES
+  -- Кредит 1 (Иван - авто)
+  (1, 1, 80000, 65000),
+  (1, 2, 120000, 98000),
+  -- Кредит 2 (Иван - ремонт, закрыт)
+  (2, 3, 50000, 0),
+  -- Кредит 3 (Анна - ипотека)
+  (3, 4, 200000, 185000),
+  (3, 5, 150000, 140000),
+  -- Кредит 4 (Анна - образование)
+  (4, 1, 80000, 72000),
+  -- Кредит 5 (Павел - потребительский)
+  (5, 2, 150000, 132000),
+  -- Кредит 6 (Ольга - ипотека)
+  (6, 3, 300000, 285000),
+  (6, 4, 200000, 190000),
+  -- Кредит 7 (Сергей - техника, закрыт)
+  (7, 5, 120000, 0),
+  -- Кредит 8 (Сергей - авто)
+  (8, 1, 100000, 92000),
+  (8, 2, 150000, 138000);
+
+SELECT setval('loan_splits_split_id_seq', (SELECT MAX(split_id) FROM loan_splits));
+
+
+-- 5) Платежи по кредитам
 INSERT INTO loan_payments (loan_id, amount, paid_at, method, status)
-SELECT l.loan_id,
-       round((l.original_amount / 12)::numeric, 2) AS amount,
-       now() - interval '7 days'                   AS paid_at,
-       'card'                                      AS method,
-       'posted'                                    AS status
-FROM loans l
-WHERE l.user_id BETWEEN 1 AND 5;
+VALUES
+  -- Платежи по кредиту 1
+  (1, 15000, '2024-01-15 10:00:00', 'BANK_TRANSFER', 'posted'),
+  (1, 15000, '2024-02-15 10:00:00', 'CARD', 'posted'),
+  (1, 15000, '2024-03-15 10:00:00', 'CARD', 'posted'),
+  -- Платежи по кредиту 3
+  (3, 25000, '2024-01-20 09:15:00', 'BANK_TRANSFER', 'posted'),
+  (3, 25000, '2024-02-20 09:15:00', 'CARD', 'posted'),
+  (3, 25000, '2024-03-20 09:15:00', 'CARD', 'posted'),
+  -- Платежи по кредиту 4
+  (4, 8000, '2024-02-05 16:45:00', 'CARD', 'posted'),
+  (4, 8000, '2024-03-05 16:45:00', 'CARD', 'posted'),
+  -- Платежи по кредиту 5
+  (5, 12000, '2024-01-12 11:20:00', 'BANK_TRANSFER', 'posted'),
+  (5, 12000, '2024-02-12 11:20:00', 'CARD', 'posted'),
+  (5, 12000, '2024-03-12 11:20:00', 'CARD', 'posted'),
+  -- Платежи по кредиту 6
+  (6, 30000, '2024-01-28 13:10:00', 'BANK_TRANSFER', 'posted'),
+  (6, 30000, '2024-02-28 13:10:00', 'BANK_TRANSFER', 'posted'),
+  (6, 30000, '2024-03-28 13:10:00', 'CARD', 'posted'),
+  -- Платежи по кредиту 8
+  (8, 18000, '2024-02-22 15:25:00', 'CARD', 'posted'),
+  (8, 18000, '2024-03-22 15:25:00', 'CARD', 'posted');
 
--- 5) Транзакции (по 3 на пользователя в каждом банке)
-WITH user_banks AS (
-  SELECT u.user_id, b.bank_id
-  FROM users u
-  CROSS JOIN banks b
-  WHERE u.user_id BETWEEN 1 AND 5
-),
-transaction_rows AS (
-  SELECT user_id, bank_id, generate_series(1,3) AS transaction_num
-  FROM user_banks
-)
+SELECT setval('loan_payments_payment_id_seq', (SELECT MAX(payment_id) FROM loan_payments));
+
+-- 6) Распределение платежей (payment_allocations)
+INSERT INTO payment_allocations (payment_id, split_id, principal_paid, interest_paid)
+VALUES
+  -- Распределение платежей по кредиту 1
+  (1, 1, 6000, 9000),
+  (1, 2, 9000, 6000),
+  (2, 1, 6000, 9000),
+  (2, 2, 9000, 6000),
+  (3, 1, 6000, 9000),
+  (3, 2, 9000, 6000),
+  -- Распределение платежей по кредиту 3
+  (4, 3, 12000, 13000),
+  (4, 4, 9000, 16000),
+  (5, 3, 12000, 13000),
+  (5, 4, 9000, 16000),
+  (6, 3, 12000, 13000),
+  (6, 4, 9000, 16000),
+  -- Распределение платежей по кредиту 4
+  (7, 5, 7000, 1000),
+  (8, 5, 7000, 1000),
+  -- Распределение платежей по кредиту 5
+  (9, 6, 12000, 0),
+  (10, 6, 12000, 0),
+  (11, 6, 12000, 0),
+  -- Распределение платежей по кредиту 6
+  (12, 7, 14000, 16000),
+  (12, 8, 9000, 21000),
+  (13, 7, 14000, 16000),
+  (13, 8, 9000, 21000),
+  (14, 7, 14000, 16000),
+  (14, 8, 9000, 21000),
+  -- Распределение платежей по кредиту 8
+  (15, 9, 8000, 10000),
+  (15, 10, 12000, 6000),
+  (16, 9, 8000, 10000),
+  (16, 10, 12000, 6000);
+
+SELECT setval('payment_allocations_allocation_id_seq', (SELECT MAX(allocation_id) FROM payment_allocations));
+
+-- 7) Кредитные заявки
+INSERT INTO credit_applications (user_id, bank_id, type_code, status_code, requested_amount, loan_id, submitted_at)
+VALUES
+  (1, 1, 'AUTO', 'APPROVED', 200000, 1, '2023-01-10 14:20:00'),
+  (1, 3, 'PERSONAL', 'APPROVED', 50000, 2, '2022-06-05 11:30:00'),
+  (2, 4, 'MORTGAGE', 'APPROVED', 350000, 3, '2023-03-15 16:45:00'),
+  (2, 1, 'OTHER', 'APPROVED', 80000, 4, '2023-08-01 09:15:00'),
+  (3, 2, 'PERSONAL', 'APPROVED', 150000, 5, '2023-05-08 13:20:00'),
+  (4, 3, 'MORTGAGE', 'APPROVED', 500000, 6, '2023-02-25 10:10:00'),
+  (5, 5, 'PERSONAL', 'APPROVED', 120000, 7, '2022-11-10 12:30:00'),
+  (5, 1, 'AUTO', 'APPROVED', 250000, 8, '2023-07-18 17:25:00'),
+  (1, 2, 'PERSONAL', 'REJECTED', 100000, NULL, '2024-01-20 15:40:00'),
+  (3, 4, 'OTHER', 'PENDING', 75000, NULL, '2024-03-25 08:50:00'),
+  (4, 5, 'AUTO', 'CANCELLED', 300000, NULL, '2024-02-14 11:35:00');
+
+SELECT setval('credit_applications_application_id_seq', (SELECT MAX(application_id) FROM credit_applications));
+
+
+
+-- 8) Транзакции (расширенные с русскими описаниями)
 INSERT INTO transactions (user_id, bank_id, amount, category, description, occurred_at)
-SELECT 
-  tr.user_id,
-  tr.bank_id,
-  round((random()*-5000 - 1000)::numeric, 2) as amount,
-  (ARRAY['groceries','transport','entertainment','utilities'])[1 + floor(random()*4)::int] as category,
-  'Demo expense ' || tr.transaction_num as description,
-  now() - ((random()*20)::int || ' days')::interval as occurred_at
-FROM transaction_rows tr;
+VALUES
+  -- Иван Петров
+  (1, 1, -5240.50, 'groceries', 'Покупка продуктов в Пятерочке', '2024-03-28 18:30:00'),
+  (1, 1, -1500.00, 'transport', 'Заправка автомобиля', '2024-03-27 08:15:00'),
+  (1, 1, 45000.00, 'income', 'Зарплата', '2024-03-25 10:00:00'),
+  (1, 2, -3200.75, 'entertainment', 'Ресторан Суши-Мастер', '2024-03-24 20:45:00'),
+  (1, 2, -890.00, 'utilities', 'Оплата мобильной связи', '2024-03-23 14:20:00'),
+  (1, 3, -15670.25, 'shopping', 'Покупка одежды в ТЦ Атриум', '2024-03-22 16:30:00'),
+  
+  -- Анна Сидорова
+  (2, 4, -7890.00, 'groceries', 'Продукты в Магните', '2024-03-28 17:45:00'),
+  (2, 4, -2500.00, 'transport', 'Такси до работы', '2024-03-27 09:30:00'),
+  (2, 4, 65000.00, 'income', 'Аванс по зарплате', '2024-03-26 12:00:00'),
+  (2, 5, -12450.80, 'healthcare', 'Стоматология', '2024-03-25 15:20:00'),
+  (2, 5, -5600.00, 'education', 'Курсы английского языка', '2024-03-24 19:00:00'),
+  (2, 1, -3450.25, 'entertainment', 'Кинотеатр Формула Кино', '2024-03-23 21:15:00'),
+  
+  -- Павел Смирнов
+  (3, 2, -6230.40, 'groceries', 'Супермаркет Перекресток', '2024-03-28 19:20:00'),
+  (3, 2, -1800.00, 'transport', 'Проездной на метро', '2024-03-27 07:45:00'),
+  (3, 2, 38000.00, 'income', 'Зарплата', '2024-03-26 11:30:00'),
+  (3, 3, -8750.60, 'shopping', 'Электроника в М.Видео', '2024-03-25 18:40:00'),
+  (3, 3, -2900.00, 'utilities', 'Коммунальные услуги', '2024-03-24 13:15:00'),
+  (3, 4, -12500.00, 'travel', 'Билеты в Сочи', '2024-03-23 16:50:00'),
+  
+  -- Ольга Иванова
+  (4, 3, -4560.75, 'groceries', 'Продукты в Ашане', '2024-03-28 16:35:00'),
+  (4, 3, -2200.00, 'transport', 'Каршеринг', '2024-03-27 10:20:00'),
+  (4, 3, 72000.00, 'income', 'Зарплата', '2024-03-26 09:45:00'),
+  (4, 4, -15600.25, 'healthcare', 'Медицинский центр', '2024-03-25 14:30:00'),
+  (4, 4, -7800.00, 'education', 'Курсы программирования', '2024-03-24 20:00:00'),
+  (4, 5, -5430.80, 'entertainment', 'Концерт в Крокус Сити', '2024-03-23 22:10:00'),
+  
+  -- Сергей Волков
+  (5, 5, -3890.90, 'groceries', 'Продукты в Ленте', '2024-03-28 15:25:00'),
+  (5, 5, -1650.00, 'transport', 'Такси из аэропорта', '2024-03-27 23:40:00'),
+  (5, 5, 42000.00, 'income', 'Зарплата', '2024-03-26 10:15:00'),
+  (5, 1, -11230.45, 'shopping', 'Мебель в ИКЕА', '2024-03-25 17:55:00'),
+  (5, 1, -4300.00, 'utilities', 'Интернет и ТВ', '2024-03-24 12:25:00'),
+  (5, 2, -6780.00, 'travel', 'Отель в Санкт-Петербурге', '2024-03-23 19:35:00'),
+
+  -- Дополнительные транзакции за предыдущие месяцы
+  (1, 1, -4230.25, 'groceries', 'Продукты на неделю', '2024-02-15 18:20:00'),
+  (2, 4, -15600.00, 'shopping', 'Покупка зимней одежды', '2024-01-20 14:45:00'),
+  (3, 2, 25000.00, 'income', 'Премия по итогам года', '2023-12-28 11:00:00'),
+  (4, 3, -8900.75, 'healthcare', 'Аптека', '2024-02-10 16:30:00'),
+  (5, 5, -12340.50, 'entertainment', 'Ресторан на день рождения', '2024-01-15 21:00:00');
+
+SELECT setval('transactions_transaction_id_seq', (SELECT MAX(transaction_id) FROM transactions));
+
+-- Обновляем материализованные представления
+REFRESH MATERIALIZED VIEW total_balance_view;
+REFRESH MATERIALIZED VIEW total_debt_view;
+REFRESH MATERIALIZED VIEW credit_progress_view;

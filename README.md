@@ -9,9 +9,18 @@
 **Production работает на:** http://147.45.147.73:8081
 
 ```
-# Запуск продакшен окружения
-docker compose -f docker-compose.prod.yml --env-file=.env.prod up -d --force-recreate
+# Запуск бэкенда
+cd backend
+docker compose -f docker-compose.prod.yml --env-file ./.env.dev up -d --force-recreate
+
+# Запуск фронтенда 
+
+cd ..
+cd frontend
+npm run dev
 ```
+
+
 
 ## 📋 Основные возможности
 
