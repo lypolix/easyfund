@@ -43,3 +43,9 @@ Thumbs.db
 # Локальные данные
 loki-data/
 minio-data/
+
+./frontend/node_modules/
+/frontend/node_modules/
+.frontend/node_modules/
+
+
