@@ -8,13 +8,16 @@
 ### Продакшен окружение
 **Production работает на:** http://147.45.147.73:8081
 
+Запуск бэкенда
+
 ```
-# Запуск бэкенда
 cd backend
 docker compose -f docker-compose.prod.yml --env-file ./.env.dev up -d --force-recreate
+```
 
-# Запуск фронтенда 
+Запуск фронтенда 
 
+```
 cd ..
 cd frontend
 npm run dev
@@ -58,5 +61,6 @@ npm run dev
 
 - **Маркетплейс ликвидности** - подключение инвесторов и фондов
 - **ML-модели** - динамический прайсинг, адаптивные лимиты, stress-testing
+
 
 
