@@ -54,13 +54,14 @@ npm run dev
 **Backend:** Go, Gin  
 **Frontend:** React, TypeScript  
 **Data:** PostgreSQL  
-**DevOps:** Docker, CI/CD 
+**DevOps:** Docker, CI/CD   
 **Security:** OAuth2, OpenID Connect, Vault, TLS+ГОСТ, 2FA, RBAC
 
 ## 🔮 Планы развития
 
 - **Маркетплейс ликвидности** - подключение инвесторов и фондов
 - **ML-модели** - динамический прайсинг, адаптивные лимиты, stress-testing
+
 
 
 
