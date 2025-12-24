@@ -6,7 +6,7 @@
 ## 🚀 Быстрый старт
 
 ### Продакшен окружение
-**Production работает на:** http://147.45.147.73:8081
+**Production работает на:** https://easyfund.aldar.space
 
 ```
 # Запуск продакшен окружения
@@ -49,5 +49,6 @@ docker compose -f docker-compose.prod.yml --env-file=.env.prod up -d --force-rec
 
 - **Маркетплейс ликвидности** - подключение инвесторов и фондов
 - **ML-модели** - динамический прайсинг, адаптивные лимиты, stress-testing
+
 
 
